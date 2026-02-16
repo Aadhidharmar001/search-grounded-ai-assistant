@@ -1,0 +1,6 @@
+flask==3.1.2
+python-dotenv==1.2.1
+tavily-python==0.7.21
+openai==2.21.0
+gunicorn==23.0.0
+requests==2.32.5
