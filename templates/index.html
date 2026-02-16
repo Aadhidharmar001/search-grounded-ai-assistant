@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search-Grounded AI Assistant</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header section */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #718096;
+            font-weight: 400;
+        }
+
+        /* Form section */
+        .search-form {
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .question-input {
+            flex: 1;
+            padding: 16px 20px;
+            font-size: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.2s ease;
+            background: #f8fafc;
+        }
+
+        .question-input:focus {
+            border-color: #667eea;
+            background: white;
+        }
+
+        .question-input::placeholder {
+            color: #a0aec0;
+        }
+
+        .ask-button {
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .ask-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .ask-button:active {
+            transform: translateY(0);
+        }
+
+        /* Loading state */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Results section */
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .answer-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            position: relative;
+        }
+
+        .answer-card::before {
+            content: "🤖";
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            opacity: 0.7;
+        }
+
+        .answer-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .answer-title::before {
+            content: "💡";
+            margin-right: 8px;
+        }
+
+        .answer-content {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #2d3748;
+        }
+
+        .answer-section {
+            margin-bottom: 20px;
+        }
+
+        .answer-section h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .confidence-high {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .confidence-medium {
+            background: #fef5e7;
+            color: #744210;
+        }
+
+        .confidence-low {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .key-points {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .key-points ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .key-points li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .uncertainty-box {
+            background: #fffaf0;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            font-style: italic;
+            color: #744210;
+        }
+
+        .sources-cited {
+            background: #f0f9ff;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+        }
+
+        /* Citation highlighting */
+        .citation {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #f59e0b;
+            transition: background-color 0.2s ease;
+        }
+
+        .citation:hover {
+            background: #fde68a;
+        }
+
+        /* Follow-up questions */
+        .followup-section {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .followup-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .followup-title::before {
+            content: "💭";
+            margin-right: 8px;
+        }
+
+        .followup-questions {
+            display: grid;
+            gap: 12px;
+        }
+
+        .followup-question {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: #2d3748;
+            display: block;
+        }
+
+        .followup-question:hover {
+            background: #edf2f7;
+            border-color: #667eea;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .followup-question::before {
+            content: "❓";
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+
+        /* Sources section */
+        .sources-section {
+            border-top: 2px solid #e2e8f0;
+            padding-top: 24px;
+        }
+
+        .sources-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .sources-title::before {
+            content: "🔗";
+            margin-right: 8px;
+        }
+
+        .sources-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .source-item {
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+
+        .source-item:hover {
+            background: #edf2f7;
+        }
+
+        .source-link {
+            color: #3182ce;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .source-link::before {
+            content: "🌐";
+            margin-right: 8px;
+            font-size: 0.9rem;
+        }
+
+        .source-link:hover {
+            color: #2c5282;
+            text-decoration: underline;
+        }
+
+        /* Error handling */
+        .error-message {
+            display: none;
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            color: #c53030;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 24px;
+                margin: 16px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .ask-button {
+                width: 100%;
+            }
+
+            .answer-card {
+                padding: 20px;
+            }
+        }
+
+        /* Accessibility improvements */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Chat History */
+        .chat-history {
+            margin-top: 40px;
+            border-top: 2px solid #e2e8f0;
+            padding-top: 24px;
+        }
+
+        .history-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .history-title::before {
+            content: "💬";
+            margin-right: 8px;
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .history-question {
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+
+        .history-answer {
+            color: #4a5568;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>Search-Grounded AI Assistant</h1>
+            <p>Get accurate, web-backed answers to your questions</p>
+        </div>
+
+        <!-- Search Form -->
+        <form class="search-form" method="POST" id="searchForm">
+            <div class="input-group">
+                <input
+                    type="text"
+                    name="question"
+                    class="question-input"
+                    placeholder="What would you like to know?"
+                    required
+                    aria-label="Enter your question"
+                >
+                <button type="submit" class="ask-button" id="askButton">
+                    Ask AI
+                </button>
+            </div>
+        </form>
+
+        <!-- Loading State -->
+        <div class="loading" id="loadingState">
+            <div class="loading-spinner"></div>
+            Searching the web for the best answer...
+        </div>
+
+        <!-- Error Message -->
+        {% if error %}
+        <div class="error-message show">
+            <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Results Section -->
+        {% if answer or sources %}
+        <div class="results show">
+            <!-- Answer Card -->
+            {% if answer %}
+            <div class="answer-card">
+                <div class="answer-title">
+                    <span>AI Answer</span>
+                    {% if confidence %}
+                    <span class="confidence-badge confidence-{{ 'high' if 'High' in confidence else 'medium' if 'Medium' in confidence else 'low' }}">
+                        {{ confidence }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="answer-content">
+                    {% if parsed_answer %}
+                        {% set sections = parsed_answer.split('\n\n') %}
+                    {% else %}
+                        {% set sections = answer.split('\n\n') %}
+                    {% endif %}
+                    {% for section in sections %}
+                        {% if section.startswith('DIRECT ANSWER:') %}
+                        <div class="answer-section">
+                            <h3>Direct Answer</h3>
+                            <p>{{ section.replace('DIRECT ANSWER:', '').strip() }}</p>
+                        </div>
+                        {% elif section.startswith('KEY POINTS:') %}
+                        <div class="answer-section">
+                            <h3>Key Points</h3>
+                            <div class="key-points">
+                                {{ section.replace('KEY POINTS:', '').strip() | safe }}
+                            </div>
+                        </div>
+                        {% elif section.startswith('UNCERTAINTY/ASSUMPTIONS:') %}
+                        <div class="answer-section">
+                            <h3>Uncertainties & Assumptions</h3>
+                            <div class="uncertainty-box">
+                                {{ section.replace('UNCERTAINTY/ASSUMPTIONS:', '').strip() }}
+                            </div>
+                        </div>
+                        {% elif section.startswith('SOURCES USED:') %}
+                        <div class="answer-section">
+                            <h3>Sources Cited</h3>
+                            <div class="sources-cited">
+                                {{ section.replace('SOURCES USED:', '').strip() }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <p>{{ section }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Sources Section -->
+            {% if sources %}
+            <div class="sources-section">
+                <h3 class="sources-title">Sources</h3>
+                <ul class="sources-list">
+                    {% for source in sources %}
+                    <li class="source-item">
+                        <a href="{{ source }}" target="_blank" rel="noopener noreferrer" class="source-link">
+                            {{ source }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Chat History -->
+        {% if session.chat_history and session.chat_history|length > 1 %}
+        <div class="chat-history">
+            <h3 class="history-title">💬 Conversation History</h3>
+            <div class="history-list">
+                {% for exchange in session.chat_history[:-1] %}
+                <div class="history-item">
+                    <div class="history-question">
+                        <strong>You:</strong> {{ exchange.question }}
+                    </div>
+                    <div class="history-answer">
+                        <strong>AI:</strong> {{ exchange.answer[:200] }}...
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Follow-up Questions -->
+        {% if followup_questions %}
+        <div class="followup-section">
+            <h3 class="followup-title">Suggested Follow-up Questions</h3>
+            <div class="followup-questions">
+                {% for question in followup_questions %}
+                <a href="#" class="followup-question" onclick="useFollowupQuestion('{{ question }}')">
+                    {{ question }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Minimal JavaScript for loading state -->
+    <script>
+        const form = document.getElementById('searchForm');
+        const loadingState = document.getElementById('loadingState');
+        const askButton = document.getElementById('askButton');
+        const questionInput = document.querySelector('input[name="question"]');
+
+        form.addEventListener('submit', function() {
+            loadingState.classList.add('show');
+            askButton.disabled = true;
+            askButton.textContent = 'Searching...';
+        });
+
+        function useFollowupQuestion(question) {
+            questionInput.value = question;
+            questionInput.focus();
+            // Scroll to the top of the form
+            document.querySelector('.search-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Add click handlers for citations to show source URLs
+        document.addEventListener('DOMContentLoaded', function() {
+            const citations = document.querySelectorAll('.citation');
+            citations.forEach(citation => {
+                citation.addEventListener('click', function() {
+                    const sourceUrl = this.getAttribute('data-source');
+                    if (sourceUrl) {
+                        window.open(sourceUrl, '_blank');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
