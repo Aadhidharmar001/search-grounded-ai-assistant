@@ -136,6 +136,8 @@ def generate_followup_questions(question, answer, sources):
 
     # Return first 3 suggestions
     return followup_suggestions[:3]
+
+def ask_llm(question, context, history=None):
     # Build conversation history
     messages = [
         {
