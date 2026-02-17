@@ -138,6 +138,11 @@ def generate_followup_questions(question, answer, sources):
     return followup_suggestions[:3]
 
 def ask_llm(question, context, history=None):
+    # Check if API key is available
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise Exception("OpenRouter API key not found. Please set OPENROUTER_API_KEY environment variable.")
+
     # Build conversation history
     messages = [
         {
@@ -167,13 +172,25 @@ def ask_llm(question, context, history=None):
         "content": f"Context:\n{context}\n\nQuestion:\n{question}"
     })
 
-    response = client.chat.completions.create(
-        model="meta-llama/llama-3-8b-instruct",
-        messages=messages,
-        temperature=0.1,
-        max_tokens=1000
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="meta-llama/llama-3-8b-instruct",
+            messages=messages,
+            temperature=0.1,
+            max_tokens=1000
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        # Handle specific OpenRouter API errors
+        error_msg = str(e)
+        if "401" in error_msg or "User not found" in error_msg:
+            raise Exception("OpenRouter API authentication failed. Please check your OPENROUTER_API_KEY in Render environment variables.")
+        elif "429" in error_msg:
+            raise Exception("OpenRouter API rate limit exceeded. Please try again later.")
+        elif "400" in error_msg:
+            raise Exception("Invalid request to OpenRouter API. Please check your input.")
+        else:
+            raise Exception(f"OpenRouter API error: {error_msg}")
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -240,6 +257,46 @@ def index():
         citation_map=citation_map,
         followup_questions=followup_questions
     )
+
+@app.route("/test-apis")
+def test_apis():
+    """Test API connectivity - useful for debugging"""
+    results = {}
+
+    # Test Tavily API
+    try:
+        tavily_key = os.getenv("TAVILY_API_KEY")
+        if tavily_key:
+            # Simple search test
+            test_results = tavily.search(query="test", max_results=1)
+            results["tavily"] = "✅ Working"
+        else:
+            results["tavily"] = "❌ API key not set"
+    except Exception as e:
+        results["tavily"] = f"❌ Error: {str(e)}"
+
+    # Test OpenRouter API
+    try:
+        openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        if openrouter_key:
+            # Simple completion test
+            test_response = client.chat.completions.create(
+                model="meta-llama/llama-3-8b-instruct",
+                messages=[{"role": "user", "content": "Say 'test'"}],
+                max_tokens=10
+            )
+            results["openrouter"] = "✅ Working"
+        else:
+            results["openrouter"] = "❌ API key not set"
+    except Exception as e:
+        results["openrouter"] = f"❌ Error: {str(e)}"
+
+    return f"""
+    <h1>API Test Results</h1>
+    <p><strong>Tavily API:</strong> {results.get('tavily', 'Unknown')}</p>
+    <p><strong>OpenRouter API:</strong> {results.get('openrouter', 'Unknown')}</p>
+    <p><a href="/">Back to main app</a></p>
+    """
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
