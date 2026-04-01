@@ -1,12 +1,14 @@
 from flask import Flask, render_template, request, session
 from tavily import TavilyClient
 from openai import OpenAI
+from memory import search_memory, add_memory
 
 import os
 from dotenv import load_dotenv
 import requests
 
 load_dotenv()
+print("[app] Flask app module loaded")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
@@ -209,38 +211,67 @@ def index():
             if not question:
                 error = "Question cannot be empty."
             else:
+                question = question.strip()
+
+                print(f"[app] Incoming question: {question!r}")
+
+                # Try semantic memory before doing any web search.
+                memory_answer = search_memory(question, threshold=0.85)
+                if memory_answer:
+                    print("[app] Semantic memory HIT - skipping Tavily + LLM")
+
+                    if 'chat_history' not in session:
+                        session['chat_history'] = []
+
+                    session['chat_history'].append({
+                        "question": question,
+                        "answer": memory_answer
+                    })
+                    session['chat_history'] = session['chat_history'][-MAX_HISTORY_LENGTH:]
+                    session.modified = True
+
+                    answer = memory_answer
+                    parsed_answer, citation_map = parse_answer_with_citations(answer, sources)
+                    confidence = "High – 0.95 (semantic memory)"
+                    followup_questions = generate_followup_questions(question, answer, sources)
+                else:
+                    print("[app] Semantic memory MISS - running Tavily + LLM")
+
                 # Initialize session history if not exists
-                if 'chat_history' not in session:
-                    session['chat_history'] = []
+                    if 'chat_history' not in session:
+                        session['chat_history'] = []
 
-                # Determine search depth based on question complexity
-                search_depth = "advanced" if len(question.split()) > 10 else "basic"
+                    # Determine search depth based on question complexity
+                    search_depth = "advanced" if len(question.split()) > 10 else "basic"
 
-                results = search_web(question, search_depth)
-                context = build_context(results)
+                    results = search_web(question, search_depth)
+                    context = build_context(results)
 
-                # Get conversation history
-                history = session.get('chat_history', [])
+                    # Get conversation history
+                    history = session.get('chat_history', [])
 
-                answer = ask_llm(question, context, history)
+                    answer = ask_llm(question, context, history)
 
-                # Store this exchange in history
-                session['chat_history'].append({
-                    "question": question,
-                    "answer": answer
-                })
-                # Keep only last N exchanges
-                session['chat_history'] = session['chat_history'][-MAX_HISTORY_LENGTH:]
-                session.modified = True
+                    # Persist successful response for future semantic retrieval.
+                    add_memory(question, answer)
 
-                sources = [r.get("url") for r in results if r.get("url")]
-                confidence = calculate_confidence(results, search_depth)
+                    # Store this exchange in history
+                    session['chat_history'].append({
+                        "question": question,
+                        "answer": answer
+                    })
+                    # Keep only last N exchanges
+                    session['chat_history'] = session['chat_history'][-MAX_HISTORY_LENGTH:]
+                    session.modified = True
 
-                # Parse answer for citations
-                parsed_answer, citation_map = parse_answer_with_citations(answer, sources)
+                    sources = [r.get("url") for r in results if r.get("url")]
+                    confidence = calculate_confidence(results, search_depth)
 
-                # Generate follow-up questions
-                followup_questions = generate_followup_questions(question, answer, sources)
+                    # Parse answer for citations
+                    parsed_answer, citation_map = parse_answer_with_citations(answer, sources)
+
+                    # Generate follow-up questions
+                    followup_questions = generate_followup_questions(question, answer, sources)
 
         except requests.exceptions.RequestException:
             error = "Search service is unavailable. Please try again later."

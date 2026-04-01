@@ -4,3 +4,6 @@ tavily-python==0.7.21
 openai==2.21.0
 gunicorn==23.0.0
 requests==2.32.5
+sentence-transformers
+faiss-cpu
+numpy
