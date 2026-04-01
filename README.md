@@ -1,137 +1,399 @@
-# Search-Grounded AI Assistant
+# Hybrid Memory-First Search-Grounded AI Assistant
 
-A production-ready RAG (Retrieval-Augmented Generation) application that provides web-grounded AI answers with full transparency and conversational memory.
+A production-ready hybrid Retrieval-Augmented Generation (RAG) assistant that combines **semantic memory retrieval (EmbeddingGemma + FAISS)** with **real-time web search grounding (Tavily)** to generate structured, explainable answers using **LLaMA-3 via OpenRouter**.
 
-## Features
+Unlike traditional RAG systems that rely only on external retrieval, this assistant first checks a **local semantic memory layer** before performing live web search. This improves response speed, reduces repeated API calls, and enables persistent learning across sessions.
 
-- **Real-time Web Search**: Uses Tavily API for current, relevant information
-- **Conversational Memory**: Maintains context across multiple questions
-- **Confidence Scoring**: Quantifies answer reliability based on sources and search depth
-- **Structured Answers**: Clear, organized responses with direct answers, key points, and uncertainties
-- **Source Transparency**: Clickable citations linking directly to source materials
-- **Agent-like Behavior**: Suggests relevant follow-up questions to guide exploration
-- **Production-Ready**: Secure configuration, health checks, and deployment support
+---
 
-## Tech Stack
+# Architecture Overview
 
-- **Backend**: Flask (Python)
-- **AI**: OpenRouter API (Llama-3-8B-Instruct)
-- **Search**: Tavily Web Search API
-- **Frontend**: Vanilla HTML/CSS/JS (no frameworks)
-- **Deployment**: Ready for Render/Railway/Heroku
+The assistant follows a memory-first hybrid reasoning pipeline:
 
-## Quick Start
 
-### Local Development
+User Query
+↓
+EmbeddingGemma (semantic embedding)
+↓
+FAISS Vector Memory Search
+↓
+If match found → return stored answer instantly
+Else
+↓
+Tavily Web Retrieval
+↓
+Context Builder
+↓
+LLaMA-3 Reasoning via OpenRouter
+↓
+Structured Response Generation
+↓
+Answer stored back into semantic memory
 
-1. **Clone and setup**:
-   ```bash
-   git clone <repository-url>
-   cd search-grounded-web-ai
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
 
-2. **Environment variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys
-   ```
+This enables:
 
-3. **Run locally**:
-   ```bash
-   python app.py
-   ```
-   Visit `http://localhost:5000`
+- faster responses for repeated queries
+- reduced hallucinations
+- persistent assistant learning
+- scalable retrieval architecture
 
-### Production Deployment
+---
 
-#### Render Deployment
-1. Connect your GitHub repository to Render
-2. Set build command: `pip install -r requirements.txt`
-3. Set start command: `gunicorn --bind 0.0.0.0:$PORT app:app`
-4. Add environment variables in Render dashboard
+# Features
 
-#### Railway Deployment
-1. Connect repository to Railway
+## Semantic Memory Layer (NEW)
+
+Uses:
+
+- EmbeddingGemma (Google DeepMind embedding model)
+- FAISS vector similarity index
+
+Capabilities:
+
+- detects similar past questions
+- retrieves answers instantly
+- reduces repeated web searches
+- improves latency over time
+- enables persistent assistant learning
+
+---
+
+## Real-time Web Search
+
+Uses Tavily Search API for:
+
+- up-to-date information retrieval
+- citation-backed answers
+- reliable external grounding
+
+Ensures responses remain:
+
+- accurate
+- traceable
+- current
+
+---
+
+## Structured LLM Reasoning
+
+Powered by:
+
+meta-llama/llama-3-8b-instruct (via OpenRouter)
+
+Responses include:
+
+- direct answer
+- key points
+- uncertainty disclosure
+- cited sources
+
+---
+
+## Confidence Scoring
+
+Answer reliability calculated using:
+
+- number of retrieved sources
+- search depth
+- relevance scores
+
+Displayed as:
+
+Low / Medium / High confidence
+
+---
+
+## Conversational Memory
+
+Maintains recent conversation history using Flask session storage.
+
+Supports:
+
+- multi-turn reasoning
+- context-aware responses
+
+---
+
+## Agent-like Behavior
+
+Assistant supports:
+
+- semantic memory reuse
+- web fallback retrieval
+- structured reasoning
+- persistent learning loop
+
+Making it behave like a hybrid reasoning agent instead of a simple chatbot.
+
+---
+
+# Tech Stack
+
+Backend:
+
+Flask (Python)
+
+Semantic Memory:
+
+EmbeddingGemma (SentenceTransformers)
+FAISS vector similarity index
+
+Search Retrieval:
+
+Tavily Web Search API
+
+LLM Reasoning:
+
+OpenRouter API  
+(meta-llama/llama-3-8b-instruct)
+
+Frontend:
+
+Vanilla HTML/CSS/JS
+
+Deployment:
+
+Render / Railway / Heroku ready
+
+---
+
+# Quick Start
+
+## Local Development
+
+Clone repository:
+
+
+git clone <repository-url>
+cd search-grounded-web-ai
+
+
+Create virtual environment:
+
+
+python -m venv venv
+source venv/bin/activate
+
+
+Windows:
+
+
+venv\Scripts\activate
+
+
+Install dependencies:
+
+
+pip install -r requirements.txt
+
+
+Create environment variables:
+
+
+cp .env.example .env
+
+
+Edit `.env` file:
+
+
+TAVILY_API_KEY=your_key_here
+OPENROUTER_API_KEY=your_key_here
+FLASK_SECRET_KEY=your_secret_here
+FLASK_ENV=development
+
+
+Run application:
+
+
+python app.py
+
+
+Visit:
+
+
+http://localhost:5000
+
+
+---
+
+# Production Deployment
+
+## Render Deployment
+
+1. Connect repository to Render
+2. Set build command:
+
+
+pip install -r requirements.txt
+
+
+3. Set start command:
+
+
+gunicorn --bind 0.0.0.0:$PORT app:app
+
+
+4. Add environment variables in dashboard
+
+---
+
+## Railway Deployment
+
+1. Connect repository
 2. Railway auto-detects Flask app
-3. Add environment variables in Railway dashboard
+3. Add environment variables
 
-## Environment Variables
+---
 
-Create a `.env` file with:
+# Environment Variables
 
-```env
-# Required API Keys
-TAVILY_API_KEY=your_tavily_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
+Create `.env` file:
 
-# Flask Configuration
-FLASK_SECRET_KEY=your_secure_random_secret_key
-FLASK_ENV=production  # or development
 
-# Optional: Port (defaults to 5000)
+TAVILY_API_KEY=your_tavily_key
+OPENROUTER_API_KEY=your_openrouter_key
+
+FLASK_SECRET_KEY=your_secret_key
+FLASK_ENV=production
+
 PORT=5000
-```
 
-## API Endpoints
 
-- `GET/POST /` - Main application interface
-- `GET /health` - Health check for monitoring
+---
 
-## Architecture
+# API Endpoints
 
-### Core Components
+Main interface:
 
-1. **Web Search Layer**: Tavily API integration with configurable search depth
-2. **AI Processing**: Structured prompt engineering for consistent responses
-3. **Memory Management**: Flask sessions for conversation history
-4. **Confidence Calculation**: Multi-factor scoring system
-5. **Citation Mapping**: Regex-based source linking
-6. **Follow-up Generation**: Rule-based question suggestions
 
-### Security Features
+GET / POST /
 
-- Secure session configuration
-- Environment variable validation
-- Input sanitization
-- HTTPS enforcement in production
 
-## Development
+Health check endpoint:
 
-### Code Structure
-```
-search-grounded-web-ai/
-├── app.py                 # Main Flask application
-├── templates/
-│   └── index.html        # Single-page UI
-├── requirements.txt      # Python dependencies
-├── .env.example         # Environment template
-└── README.md            # This file
-```
 
-### Key Functions
+GET /health
 
-- `search_web()` - Web search with depth configuration
-- `calculate_confidence()` - Answer reliability scoring
-- `parse_answer_with_citations()` - Citation highlighting
-- `generate_followup_questions()` - Agent-like suggestions
-- `ask_llm()` - Structured AI prompting with history
 
-## Monitoring
+---
 
-- Health check endpoint: `/health`
-- Structured logging (add as needed)
-- Error handling with user-friendly messages
+# Core Architecture Components
 
-## Contributing
+Web Retrieval Layer:
 
-1. Follow existing code patterns
-2. Add tests for new features
-3. Update documentation
-4. Ensure production readiness
+Tavily API integration with configurable search depth
 
-## License
+Semantic Memory Layer:
 
-MIT License - see LICENSE file for details.
+EmbeddingGemma embeddings + FAISS vector index
+
+Reasoning Engine:
+
+LLaMA-3 via OpenRouter structured prompting
+
+Conversation Memory:
+
+Flask session-based context tracking
+
+Confidence Scoring:
+
+Multi-factor reliability estimation
+
+Citation Mapping:
+
+Source traceability support
+
+Follow-up Generation:
+
+Agent-style question suggestions
+
+---
+
+# Why This Architecture Matters
+
+Traditional assistants:
+
+
+query → web search → LLM response
+
+
+This assistant:
+
+
+query
+→ semantic memory search
+→ if miss → web search
+→ reasoning
+→ persistent storage
+
+
+Benefits:
+
+- faster responses
+- reduced API usage
+- scalable retrieval pipeline
+- improved answer consistency
+- agent-style learning behavior
+
+---
+
+# Monitoring
+
+Health check endpoint:
+
+
+/health
+
+
+Supports:
+
+deployment monitoring  
+uptime verification  
+service diagnostics  
+
+---
+
+# Security Features
+
+Secure session configuration  
+environment variable validation  
+input sanitization  
+production-safe cookie handling  
+
+---
+
+# Future Improvements
+
+Streaming responses  
+source sentence highlighting  
+feedback loop integration  
+vector database upgrade (Pinecone / Weaviate)  
+multi-tool agent orchestration  
+
+---
+
+# Author
+
+Aadhidharmar T  
+B.Tech Artificial Intelligence & Data Science  
+
+Focused on:
+
+GenAI systems  
+retrieval-augmented reasoning  
+semantic memory architectures  
+agent-based AI engineering  
+
+---
+
+# License
+
+MIT License
+✅ After pasting this
+
+Do:
+
+git add README.md
+git commit -m "docs: upgraded README to reflect semantic memory architecture"
+git push
